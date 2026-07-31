@@ -7,14 +7,25 @@ death state (reward 0). Built on the icu-sepsis gymnasium environment which
 derives its transition dynamics from the MIMIC-III clinical dataset.
 """
 
+from pathlib import Path
+
 import gymnasium as gym
 import icu_sepsis  # noqa: F401 - registers ICU-Sepsis environments
+import icu_sepsis.envs.sepsis as _icu_sepsis_env
+from icu_sepsis.utils.io import MDPParameters
 from typing import List
 from pydantic import BaseModel, field_validator
 
 from openreward.environments import (
     Environment, JSONObject, ToolOutput, tool, TextBlock,
 )
+
+# The ICU-Sepsis transition + reward matrices ((716, 25, 716) float64, ~98 MiB
+# each) are identical for every session — only the seed/RNG differs. gym.make()
+# loads a fresh ~196 MiB copy of them per session, so under concurrent sessions a
+# pod duplicated them to tens of GiB and exhausted node RAM. Load them ONCE at
+# import and share the read-only arrays across all sessions (see setup()).
+_SHARED_MDP = MDPParameters(Path(_icu_sepsis_env.__file__).parent / "assets")
 
 NUM_TASKS = 1000
 NUM_ACTIONS = 25
@@ -59,6 +70,15 @@ class ICUSepsisEnvironment(Environment):
 
     async def setup(self):
         self.env = gym.make("Sepsis/ICU-Sepsis-v2")
+        # Repoint this session's env at the shared transition/reward matrices so
+        # the fresh ~196 MiB copies gym.make() just loaded are freed. NB: we do
+        # NOT pass these via gym.make(params=...) — gymnasium deep-copies make
+        # kwargs into the env's cached spec, which would reintroduce a full
+        # per-session copy. The matrices are read-only during stepping (only the
+        # per-env RNG is mutated), so sharing across sessions is safe.
+        unwrapped = self.env.unwrapped
+        unwrapped._tx_mat = _SHARED_MDP.tx_mat
+        unwrapped._r_mat = _SHARED_MDP.r_mat
         obs, info = self.env.reset(seed=self.config.seed)
         self.current_state = int(obs)
         self.current_info = info
