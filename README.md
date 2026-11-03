@@ -20,13 +20,11 @@ Minimal. The environment is a tabular MDP with no GPU or significant memory requ
 
 ## License
 
-[MIT License](https://github.com/icu-sepsis/icu-sepsis/blob/main/packages/icu_sepsis/LICENSE.txt) (original ICU-Sepsis package).
+[MIT](https://opensource.org/licenses/MIT). The original [ICU-Sepsis package](https://github.com/icu-sepsis/icu-sepsis/blob/main/packages/icu_sepsis/LICENSE.txt) is also MIT.
 
 ## Tasks
 
-There is one split:
-
-- **train**: 1,000 tasks (seeds 0-999)
+There are 1,000 tasks in the `train` split (seeds 0-999).
 
 Each task uses a unique random seed that determines the initial patient state sampled from the learned initial state distribution. All tasks share the same underlying MDP dynamics (transition probabilities, reward structure).
 
@@ -52,7 +50,7 @@ Agents are given two tools:
 
 ## Time Horizon
 
-ICU-Sepsis is a multi-turn environment. Episodes terminate when the patient reaches a survival or death state, or when the maximum step limit (20 steps) is reached. Based on baseline evaluations from the original paper, episodes typically last 9-11 steps.
+ICU-Sepsis is a multi-turn environment. Episodes terminate when the patient reaches a survival or death state, or when the maximum step limit (500 steps, the `icu-sepsis` package default) is reached. Based on baseline evaluations from the original paper, episodes typically last 9-11 steps.
 
 ## Environment Difficulty
 
